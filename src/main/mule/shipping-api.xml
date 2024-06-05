@@ -1,0 +1,242 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<mule xmlns="http://www.mulesoft.org/schema/mule/core" xmlns:apikit="http://www.mulesoft.org/schema/mule/mule-apikit" xmlns:db="http://www.mulesoft.org/schema/mule/db" xmlns:doc="http://www.mulesoft.org/schema/mule/documentation" xmlns:ee="http://www.mulesoft.org/schema/mule/ee/core" xmlns:http="http://www.mulesoft.org/schema/mule/http" xmlns:xsi="http://www.w3.org/2001/XMLSchema-instance" xsi:schemaLocation="http://www.mulesoft.org/schema/mule/core http://www.mulesoft.org/schema/mule/core/current/mule.xsd http://www.mulesoft.org/schema/mule/http http://www.mulesoft.org/schema/mule/http/current/mule-http.xsd http://www.mulesoft.org/schema/mule/mule-apikit http://www.mulesoft.org/schema/mule/mule-apikit/current/mule-apikit.xsd http://www.mulesoft.org/schema/mule/ee/core http://www.mulesoft.org/schema/mule/ee/core/current/mule-ee.xsd  http://www.mulesoft.org/schema/mule/db http://www.mulesoft.org/schema/mule/db/current/mule-db.xsd">
+    <http:listener-config name="shipping-api-httpListenerConfig">
+        <http:listener-connection host="0.0.0.0" port="8081" />
+    </http:listener-config>
+    <apikit:config name="shipping-api-config" api="resource::dfcd2a19-4b28-4e3b-a877-fc633052cb30:shipping-api:1.0.4:oas:zip:shipping-api.json" outboundHeadersMapName="outboundHeaders" httpStatusVarName="httpStatus" />
+    <db:config name="Database_Config" doc:name="Database Config" doc:id="b2a31015-cc17-44b5-8386-8c450a3194ed">
+        <db:my-sql-connection host="sql12.freemysqlhosting.net" port="3306" user="sql12711669" password="pu7SI27ytv" database="sql12711669" />
+    </db:config>
+    <flow name="shipping-api-main">
+        <http:listener config-ref="shipping-api-httpListenerConfig" path="/api/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:router config-ref="shipping-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:BAD_REQUEST">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Bad request"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">400</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:METHOD_NOT_ALLOWED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Method not allowed"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">405</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_ACCEPTABLE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not acceptable"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">406</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:UNSUPPORTED_MEDIA_TYPE">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Unsupported media type"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">415</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+            <on-error-propagate type="APIKIT:NOT_IMPLEMENTED">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Not Implemented"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">501</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="shipping-api-console">
+        <http:listener config-ref="shipping-api-httpListenerConfig" path="/console/*">
+            <http:response statusCode="#[vars.httpStatus default 200]">
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:response>
+            <http:error-response statusCode="#[vars.httpStatus default 500]">
+                <http:body>#[payload]</http:body>
+                <http:headers>#[vars.outboundHeaders default {}]</http:headers>
+            </http:error-response>
+        </http:listener>
+        <apikit:console config-ref="shipping-api-config" />
+        <error-handler>
+            <on-error-propagate type="APIKIT:NOT_FOUND">
+                <ee:transform doc:name="Transform Message">
+                    <ee:message>
+                        <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+{message: "Resource not found"}]]></ee:set-payload>
+                    </ee:message>
+                    <ee:variables>
+                        <ee:set-variable variableName="httpStatus">404</ee:set-variable>
+                    </ee:variables>
+                </ee:transform>
+            </on-error-propagate>
+        </error-handler>
+    </flow>
+    <flow name="get:\shipping:shipping-api-config">
+        <db:select doc:name="Select" doc:id="4f62d3cb-f451-4c06-bd16-f637bd8dca48" config-ref="Database_Config">
+            <db:sql><![CDATA[select * from Shipping;]]></db:sql>
+        </db:select>
+        <ee:transform doc:name="Transform Message">
+            <ee:message>
+                <ee:set-payload><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+            </ee:message>
+        </ee:transform>
+        <logger level="INFO" doc:name="Logger" doc:id="f207d6eb-e6c6-4ec2-86cc-a639b7e44852" message="#[payload]" />
+    </flow>
+    <flow name="post:\shipping:shipping-api-config">
+        <logger level="INFO" doc:name="Logger" doc:id="7bcb0b9f-4984-4d8a-8b9b-d677c15508be" message="#[payload]"/>
+		<ee:transform doc:name="Transform Message">
+            <ee:message>
+            </ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="priority" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.priority]]></ee:set-variable>
+			</ee:variables>
+        </ee:transform>
+		<db:select doc:name="Select" doc:id="8bae733a-7019-4f2c-b2b2-12d5ead05fc9" config-ref="Database_Config">
+			<db:sql ><![CDATA[select Slots, EstimatedDelRange from Shipping where Priority= :priority;]]></db:sql>
+			<db:input-parameters ><![CDATA[#[{'priority': vars.priority}]]]></db:input-parameters>
+		</db:select>
+		<ee:transform doc:name="Transform Message" doc:id="0566eab5-9265-4921-a303-757e6f01a5e7" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+			<ee:variables >
+				<ee:set-variable variableName="slots" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.Slots]]></ee:set-variable>
+				<ee:set-variable variableName="estdel" ><![CDATA[%dw 2.0
+output application/json
+---
+payload.EstimatedDelRange
+]]></ee:set-variable>
+				<ee:set-variable variableName="status" ><![CDATA[%dw 2.0
+output application/java
+---
+{
+}]]></ee:set-variable>
+			</ee:variables>
+		</ee:transform>
+		<logger level="INFO" doc:name="Logger" doc:id="b5e4caf9-32d6-4f5a-b758-a4df85f6263b" message="payload"/>
+		<choice doc:name="Choice" doc:id="82180a36-2c0b-42c5-a251-bfbca57d98d4" >
+			<when expression="#[payload[0].Slots&gt;=0]">
+				<db:update doc:name="Update" doc:id="c18ba12d-81b5-4ef6-ae60-371c3ad1751d" config-ref="Database_Config">
+					<db:sql ><![CDATA[update Shipping set Slots= :slots where Priority= :priority;]]></db:sql>
+					<db:input-parameters ><![CDATA[#[{"slots": (vars.slots[0]) - 1,
+ "priority": vars.priority	
+}]]]></db:input-parameters>
+				</db:update>
+				<ee:transform doc:name="Transform Message" doc:id="1615003a-4bdc-4dba-ac24-a0188bb34213" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	
+}]]></ee:set-payload>
+					</ee:message>
+					<ee:variables >
+						<ee:set-variable variableName="estdeldate" ><![CDATA[%dw 2.0
+output application/json
+---
+(now() + (vars.estdel[0] as Number) * |P1D|) as String {format: "yyyy-MM-dd'T'HH:mm:ss"}
+]]></ee:set-variable>
+					</ee:variables>
+				</ee:transform>
+				<ee:transform doc:name="Transform Message" doc:id="3e92bef2-f7ae-43bd-bc80-c28e602a1e7c" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+{
+	"status": "Order accepted, Estimated delivery date is " ++ vars.estdeldate
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</when>
+			<otherwise>
+				<ee:transform doc:name="Transform Message" doc:id="3d9751da-1bd9-4bb4-a747-a89fbbb22744" >
+					<ee:message >
+						<ee:set-payload ><![CDATA[%dw 2.0
+output application/java
+---
+{
+	"status": "Order rejected"
+}]]></ee:set-payload>
+					</ee:message>
+				</ee:transform>
+			</otherwise>
+		</choice>
+		<ee:transform doc:name="Transform Message" doc:id="b7eb7bcd-df8b-44f1-9d35-6aa7e3bb206c" >
+			<ee:message >
+				<ee:set-payload ><![CDATA[%dw 2.0
+output application/json
+---
+payload]]></ee:set-payload>
+			</ee:message>
+		</ee:transform>
+    </flow>
+</mule>
